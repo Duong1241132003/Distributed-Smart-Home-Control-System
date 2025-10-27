@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giao diện điều khiển</title>
+    <style>
+        body {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            gap: 20px;
+            padding: 20px;
+        }
+        .block {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        #block1 {
+            grid-column: 1;
+            grid-row: 1;
+        }
+        #block2 {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        #block3 {
+            grid-column: 3;
+            grid-row: 1;
+        }
+        #block3a {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        #block4 {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        #block5 {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        .row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        input[type="color"] {
+            border: none;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+        }
+        input[type="range"] {
+            width: 80%;
+        }
+        .sensor-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1976d2;
+            margin: 5px 0;
+        }
+        .unit {
+            font-size: 1rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="block" id="block1">
+        <h2>Thông số môi trường</h2>
+        <div class="sensor-value" id="temperature">--</div>
+        <span class="unit">°C</span>
+        <div class="sensor-value" id="turbidity">--</div>
+        <span class="unit">NTU</span>
+        <div class="sensor-value" id="curtain">--</div>
+        <span class="unit">%</span>
+
+        <!-- <p id="update-time">Cập nhật: --:--:--</p> -->
+        <h3 id="disconnect2" style="display: none;">DISCONNECT</h3>
+    </div>
+
+
+    <div class="block" id="block2">
+        <h2>Điều khiển bơm nước</h2>
+        <div class="row">
+            <button onclick="toggleWaterPump()">Bật/Tắt</button>
+            <p>Trạng thái: <span id="buttonStatus">Tắt</span></p>
+        </div>
+        <br>
+        <h3 id="disconnect2" style="display: none;">DISCONNECT</h3>
+    </div>
+
+
+    <div class="block" id="block3">
+        <h2>Điều khiển rèm</h2>
+        <button onclick="toggleCurtain()">STOP</button>
+        <br>
+        <h3 id="disconnect1" style="display: none;">DISCONNECT</h3>
+    </div>
+
+
+    <div class="block" id="block3a">
+        <h2>Điều chỉnh rèm</h2>
+        <input type="range" id="curtainRange" min="0" max="100" value="0" onchange="adjustCurtain()">
+        <p>Độ mở rèm: <span id="curtainValue">0%</span></p>
+        <br>
+        <p id="runningStatus">Running</p>
+        <br>
+        <h3 id="disconnect1" style="display: none;">DISCONNECT</h3>
+    </div>
+
+
+    <div class="block" id="block4">
+        <h2>Công tắc</h2>
+        <div class="row">
+            <p>Trạng thái: <span id="switchStatus">Tắt</span></p>
+            <button onclick="toggleSwitch()">Bật/Tắt</button>
+        </div>
+        <h3 id="disconnect1" style="display: none;">DISCONNECT</h3>
+    </div>
+
+
+    <div class="block" id="block5">
+        <h2>Đèn RGB</h2>
+        <input type="color" id="colorPicker" value="#ffffff" onchange="changeColor()">
+        <p>Màu sắc: <span id="rgbValue">#FFFFFF</span></p>
+        <br>
+        <h3 id="disconnect1" style="display: none;">DISCONNECT</h3>
+    </div>
+   
+
+
+    <script>
+        let waterPump = false, motorState = "stopped", curtainPos = 0, currentColor = "#FFFFFF";
+        let curtainState = false; // Biến trạng thái rèm (Đóng/Mở)
+        let curtainPercentage = 0; // Biến phần trăm mở rèm
+     
+        // let statusSL1 = true;
+        // let statusSL2 = true;
+
+
+        // Hàm kiểm tra và ẩn/hiển thị dòng DISCONNECT cho STATUSSL2
+        function toggleDisconnect2() {
+            let disconnectElements2 = document.querySelectorAll('#disconnect2');
+            disconnectElements2.forEach(function(disconnectElement2) {
+                if (statusSL2 === "false") {
+                    disconnectElement2.style.display = "block"; // Hiển thị dòng DISCONNECT
+                } else {
+                    disconnectElement2.style.display = "none"; // Ẩn dòng DISCONNECT
+                }
+            });
+        }
+
+
+        // Hàm kiểm tra và ẩn/hiển thị dòng DISCONNECT cho STATUSSL1
+        function toggleDisconnect1() {
+            let disconnectElements1 = document.querySelectorAll('#disconnect1');
+            disconnectElements1.forEach(function(disconnectElement1) {
+                if (statusSL1 === "false") {
+                    disconnectElement1.style.display = "block"; // Hiển thị dòng DISCONNECT
+                } else {
+                    disconnectElement1.style.display = "none"; // Ẩn dòng DISCONNECT
+                }
+            });
+        }
+
+
+        // Gọi hàm để kiểm tra trạng thái ban đầu
+        toggleDisconnect1();
+        toggleDisconnect2();
+
+
+        // Cập nhật dữ liệu cảm biến
+        function updateSensorData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('temperature').textContent = data.temp;
+                    document.getElementById('turbidity').textContent = data.turbidity;
+                    document.getElementById('curtain').textContent = data.curtain;
+                    // document.getElementById('statusSL1').textContent = data.statusSL1;
+                    document.getElementById('update-time').textContent = 'Cập nhật: ' + new Date().toLocaleTimeString();
+                });
+        }
+
+
+        // Điều khiển bơm nước
+        function toggleWaterPump() {
+            waterPump = !waterPump;
+            document.getElementById('buttonStatus').textContent = waterPump ? 'Bật' : 'Tắt';
+            fetch('/toggle?state=' + (waterPump ? '1' : '0'));
+        }
+
+
+        // Điều khiển rèm
+        function toggleCurtain() {
+            fetch('/curtain/status?state=' + (curtainState ? '0' : '1'));
+            curtainState = !curtainState;
+        }
+
+
+        function adjustCurtain() {
+            let curtainValue = document.getElementById("curtainRange").value;
+            document.getElementById("curtainValue").textContent = curtainValue + "%";
+            fetch('/curtain/percentage?value=' + curtainValue);
+
+
+            // Kiểm tra nếu curtainValue == -1 thì hiển thị "Running", ngược lại thì ẩn
+            if (curtainValue == -1) {
+                document.getElementById("runningStatus").style.display = "block";
+            } else {
+                document.getElementById("runningStatus").style.display = "none";
+            }
+        }
+
+
+        // Điều khiển công tắc
+        function toggleSwitch() {
+            let switchState = document.getElementById('switchStatus').textContent === "Tắt" ? '1' : '0';
+            document.getElementById('switchStatus').textContent = switchState === '1' ? 'Bật' : 'Tắt';
+            fetch('/switch?state=' + switchState);
+        }
+
+
+        // Thay đổi màu đèn RGB
+        function changeColor() {
+            currentColor = document.getElementById('colorPicker').value;
+            document.getElementById('rgbValue').textContent = currentColor.toUpperCase();
+            fetch('/color?hex=' + currentColor.substring(1));  // Bỏ ký tự #
+        }
+
+
+        // Hàm khởi động động cơ
+        function startMotor() {
+            motorState = "running";
+            sendMotorStateToSerial();
+        }
+
+
+        // Gửi trạng thái động cơ đến Serial
+        function sendMotorStateToSerial() {
+            fetch('/serial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: "motor," + motorState })
+            });
+        }
+
+
+        // Cập nhật dữ liệu cảm biến mỗi 2 giây
+        setInterval(updateSensorData, 1000);
+    </script>
+</body>
+</html>
+
+
